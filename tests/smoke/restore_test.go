@@ -82,13 +82,17 @@ func cleanupDisposableRestoreTopic(t *testing.T, posting disposableRestorePostin
 
 func TestRestore(t *testing.T) {
 	first := createDisposableRestoreTopic(t, "restore test")
-	second := createDisposableRestoreTopic(t, "bulk restore test")
 	t.Cleanup(func() { cleanupDisposableRestoreTopic(t, first) })
+	second := createDisposableRestoreTopic(t, "bulk restore test")
 	t.Cleanup(func() { cleanupDisposableRestoreTopic(t, second) })
 
 	heyOK(t, "trash", strconv.FormatInt(first.ID, 10), strconv.FormatInt(second.ID, 10), "--json")
 	firstTopicID := waitForTrashedTopicID(t, first.Name)
 	secondTopicID := waitForTrashedTopicID(t, second.Name)
+	if firstTopicID != first.TopicID || secondTopicID != second.TopicID {
+		t.Fatalf("Trash search returned topic IDs %d and %d, want disposable threads %d and %d",
+			firstTopicID, secondTopicID, first.TopicID, second.TopicID)
+	}
 
 	stdout := heyOK(t, "restore", strconv.FormatInt(firstTopicID, 10), strconv.FormatInt(secondTopicID, 10), "--json")
 	var response Response
