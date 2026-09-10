@@ -33,7 +33,7 @@ func TestThreadListPage(t *testing.T) {
 	first := heyJSON(t, "thread", "list", "--in", "sent")
 	nextPage, _ := first.Meta["next_page"].(string)
 	if nextPage == "" {
-		t.Skip("Sent has no next page in this fixture")
+		skipf(t, "Sent has no next page in this fixture")
 	}
 
 	response := heyJSON(t, "thread", "list", "--in", "sent", "--page", nextPage)
@@ -42,5 +42,21 @@ func TestThreadListPage(t *testing.T) {
 	}
 	if string(response.Data) == "null" {
 		t.Fatal("expected an array, got null")
+	}
+	firstIDs := make(map[int64]bool)
+	for _, topic := range dataAs[[]threadListItem](t, first) {
+		firstIDs[topic.TopicID] = true
+	}
+	nextTopics := dataAs[[]threadListItem](t, response)
+	if len(nextTopics) == 0 {
+		t.Fatal("next page returned no threads")
+	}
+	for _, topic := range nextTopics {
+		if topic.ID <= 0 || topic.TopicID != topic.ID {
+			t.Errorf("expected matching positive id and topic_id, got %#v", topic)
+		}
+		if firstIDs[topic.TopicID] {
+			t.Errorf("next page repeated thread %d from the first page", topic.TopicID)
+		}
 	}
 }
